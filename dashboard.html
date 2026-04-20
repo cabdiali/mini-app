@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Quranic School Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div style="display: flex; align-items: center; gap: 10px; justify-content: center;">
+                    <img src="logo.png" alt="Logo"
+                        style="width: 40px; height: 40px; border-radius: 50%; background: white;">
+                    <h2>ATD School</h2>
+                </div>
+                <button id="closeSidebar" class="mobile-only">&times;</button>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-link active"><span>📊</span> Dashboard</a>
+                <a href="students.html" class="nav-link admin-only"><span>👥</span> Students</a>
+                <a href="teachers.html" class="nav-link admin-only"><span>👨‍🏫</span> Teachers</a>
+                <a href="reg-student.html" class="nav-link admin-only"><span>📝</span> Reg. Student</a>
+                <a href="reg-teacher.html" class="nav-link admin-only"><span>👨‍🔬</span> Reg. Teacher</a>
+                <a href="attendance.html" class="nav-link"><span>📅</span> Attendance</a>
+                <a href="payments.html" class="nav-link admin-only"><span>💳</span> Payments</a>
+                <a href="reports.html" class="nav-link admin-only"><span>📈</span> Reports</a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="btn btn-secondary full-width">Logout</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <button id="menuToggle" class="mobile-only">☰</button>
+                <div class="title-area">
+                    <h1>Dashboard</h1>
+                    <p style="color:var(--text-light); font-size:0.9rem;">Welcome back, <span
+                            id="userNameDisp">User</span></p>
+                </div>
+                <div class="user-info">
+                    <span id="dbStatus" class="badge">Checking...</span>
+                    <span id="currentRoleDisplay" class="role-badge">Admin</span>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <div class="stats-grid">
+                    <div class="card stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-info">
+                            <h3 id="totalStudents">0</h3>
+                            <p>Students</p>
+                        </div>
+                    </div>
+                    <div class="card stat-card admin-only">
+                        <div class="stat-icon">👨‍🏫</div>
+                        <div class="stat-info">
+                            <h3 id="totalTeachers">0</h3>
+                            <p>Teachers</p>
+                        </div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-info">
+                            <h3 id="attendanceToday">0</h3>
+                            <p>Present Today</p>
+                        </div>
+                    </div>
+                    <div class="card stat-card admin-only">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-info">
+                            <h3 id="pendingPayments">0</h3>
+                            <p>Pending Fees</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card admin-only">
+                    <h3>Attendance Trends (Last 7 Days)</h3>
+                    <div id="attendanceChart" class="chart-container"
+                        style="height:250px; display:flex; align-items:flex-end; gap:15px; padding-top:20px; border-bottom:2px solid var(--border);">
+                    </div>
+                </div>
+
+                <div class="card admin-only" id="migrationCard"
+                    style="border: 2px dashed var(--secondary); background: #fdf2f2;">
+                    <h3>Cloud Migration</h3>
+                    <p>Move your local data to Firebase Cloud. This only needs to be done once.</p>
+                    <button class="btn btn-secondary" onclick="syncLocalToCloud()">Sync All Data to Firebase</button>
+                    <p style="font-size: 0.8rem; margin-top: 10px; color: var(--secondary);">* Requires valid config in
+                        firebase-config.js</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script src="script.js"></script>
+    <script>
+        // Init Dashboard Data
+        const updateDashboard = () => {
+            document.getElementById('totalStudents').innerText = state.students.length;
+            document.getElementById('totalTeachers').innerText = state.teachers.length;
+
+            const today = new Date().toISOString().split('T')[0];
+            const todayAtt = state.attendance[today] || [];
+            document.getElementById('attendanceToday').innerText = todayAtt.filter(a => a.status === 'present').length;
+
+            const currMonth = new Date().toLocaleString('default', { month: 'long' });
+            let pendingBalance = 0;
+            state.students.forEach(s => {
+                const p = state.payments.find(pay => pay.studentId == s.id && pay.month == currMonth);
+                const totalFee = parseInt(s.fee || 200);
+                const paid = p ? parseInt(p.paidAmount || 0) : 0;
+                pendingBalance += (totalFee - paid);
+            });
+            document.getElementById('pendingPayments').innerText = '$' + pendingBalance;
+
+            if (state.currentRole === 'admin') drawChart();
+        };
+
+        const drawChart = () => {
+            const container = document.getElementById('attendanceChart');
+            if (!container) return;
+            container.innerHTML = '';
+            [65, 80, 55, 90, 75, 40, 85].forEach(v => {
+                const bar = document.createElement('div');
+                bar.className = 'chart-bar';
+                bar.style.cssText = `flex:1; background:var(--primary); border-radius:6px 6px 0 0; cursor:pointer; height:${v}%`;
+                bar.title = v + '% Presence';
+                container.appendChild(bar);
+            });
+        };
+
+        window.onload = updateDashboard;
+    </script>
+</body>
+
+</html>

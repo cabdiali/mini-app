@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - Quranic School Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>ATD School</h2>
+                <button id="closeSidebar" class="mobile-only">&times;</button>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-link"><span>📊</span> Dashboard</a>
+                <a href="students.html" class="nav-link admin-only"><span>👥</span> Students</a>
+                <a href="teachers.html" class="nav-link admin-only"><span>👨‍🏫</span> Teachers</a>
+                <a href="reg-student.html" class="nav-link admin-only"><span>📝</span> Reg. Student</a>
+                <a href="reg-teacher.html" class="nav-link admin-only"><span>👨‍🔬</span> Reg. Teacher</a>
+                <a href="attendance.html" class="nav-link"><span>📅</span> Attendance</a>
+                <a href="payments.html" class="nav-link admin-only"><span>💳</span> Payments</a>
+                <a href="reports.html" class="nav-link active admin-only"><span>📈</span> Reports</a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="btn btn-secondary full-width">Logout</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <button id="menuToggle" class="mobile-only">☰</button>
+                <div class="title-area">
+                    <h1>Management Reports</h1>
+                </div>
+                <div class="user-info"><span id="currentRoleDisplay" class="role-badge">Admin</span></div>
+            </header>
+
+            <div class="content-area">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Financial & Enrollment Summary</h3>
+                        <div style="display:flex; gap:10px">
+                            <select id="reportFilterClass" style="max-width:150px">
+                                <option value="all">All Classes</option>
+                                <option>Grade 4</option>
+                                <option>Grade 5</option>
+                                <option>Grade 6</option>
+                                <option>Grade 7</option>
+                                <option>Grade 8</option>
+                                <option>Grade 9</option>
+                                <option>Grade 10</option>
+                                <option>Grade 11</option>
+                                <option>Grade 12</option>
+                            </select>
+                            <select id="reportFilterMonth" style="max-width:150px">
+                                <option value="all">Yearly Overview</option>
+                                <option>January</option>
+                                <option>February</option>
+                                <option>March</option>
+                                <option>April</option>
+                                <option>May</option>
+                                <option>June</option>
+                                <option>July</option>
+                                <option>August</option>
+                                <option>September</option>
+                                <option>October</option>
+                                <option>November</option>
+                                <option>December</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="reportTable">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Details</th>
+                                    <th>Result</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Student Attendance History</h3>
+                        <div style="display:flex; gap:10px">
+                            <select id="reportAttendanceClassFilter" style="max-width:150px">
+                                <option value="all">All Classes</option>
+                                <option>Grade 4</option>
+                                <option>Grade 5</option>
+                                <option>Grade 6</option>
+                                <option>Grade 7</option>
+                                <option>Grade 8</option>
+                                <option>Grade 9</option>
+                                <option>Grade 10</option>
+                                <option>Grade 11</option>
+                                <option>Grade 12</option>
+                            </select>
+                            <select id="reportStudentFilter" style="max-width:180px">
+                                <option value="all">All Students</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="generateAttendanceReport()">Filter</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="attendanceReportTable">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Student</th>
+                                    <th>Class</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Payment Status Report (Pending)</h3>
+                        <div style="display:flex; gap:10px">
+                            <select id="reportPaymentClassFilter" style="max-width:150px">
+                                <option value="all">All Classes</option>
+                                <option>Grade 4</option>
+                                <option>Grade 5</option>
+                                <option>Grade 6</option>
+                                <option>Grade 7</option>
+                                <option>Grade 8</option>
+                                <option>Grade 9</option>
+                                <option>Grade 10</option>
+                                <option>Grade 11</option>
+                                <option>Grade 12</option>
+                            </select>
+                            <select id="reportPaymentMonthFilter" style="max-width:150px">
+                                <option>January</option>
+                                <option>February</option>
+                                <option>March</option>
+                                <option>April</option>
+                                <option>May</option>
+                                <option>June</option>
+                                <option>July</option>
+                                <option>August</option>
+                                <option>September</option>
+                                <option>October</option>
+                                <option>November</option>
+                                <option>December</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="generatePaymentReport()">Filter</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="paymentReportTable">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Class</th>
+                                    <th>Status</th>
+                                    <th>Summary</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Detailed Payments Collection</h3>
+                        <div style="display:flex; gap:10px">
+                            <select id="reportCollectionClassFilter" style="max-width:150px">
+                                <option value="all">All Classes</option>
+                                <option>Grade 4</option>
+                                <option>Grade 5</option>
+                                <option>Grade 6</option>
+                                <option>Grade 7</option>
+                                <option>Grade 8</option>
+                                <option>Grade 9</option>
+                                <option>Grade 10</option>
+                                <option>Grade 11</option>
+                                <option>Grade 12</option>
+                            </select>
+                            <select id="reportCollectionMonthFilter" style="max-width:150px">
+                                <option value="all">All Months</option>
+                                <option>January</option>
+                                <option>February</option>
+                                <option>March</option>
+                                <option>April</option>
+                                <option>May</option>
+                                <option>June</option>
+                                <option>July</option>
+                                <option>August</option>
+                                <option>September</option>
+                                <option>October</option>
+                                <option>November</option>
+                                <option>December</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="generateCollectionReport()">Filter</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="collectionReportTable">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Class</th>
+                                    <th>Month</th>
+                                    <th>Amount Paid</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div style="margin-top:20px; display:flex; gap:10px">
+                    <button class="btn btn-primary" onclick="window.print()">Print Report</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script src="script.js"></script>
+    <script>
+        const populateStudents = () => {
+            const select = document.getElementById('reportStudentFilter');
+            const classFilter = document.getElementById('reportAttendanceClassFilter').value;
+            select.innerHTML = '<option value="all">All Students</option>';
+
+            state.students.forEach(s => {
+                if (classFilter === 'all' || s.level === classFilter) {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.innerText = s.name;
+                    select.appendChild(opt);
+                }
+            });
+        };
+
+        const generateReport = () => {
+            const m = document.getElementById('reportFilterMonth').value;
+            const c = document.getElementById('reportFilterClass').value;
+
+            const filteredStudents = state.students.filter(s => c === 'all' || s.level === c);
+
+            let totalExpected = 0;
+            let totalCollected = 0;
+            let unpaidStudentsCount = 0;
+
+            filteredStudents.forEach(s => {
+                const fee = parseInt(s.fee || state.gradeFees[s.level] || 200);
+                let studentTotalPaid = 0;
+                let studentTotalOwed = 0;
+
+                if (m === 'all') {
+                    // Yearly Overview
+                    studentTotalOwed = fee * 12;
+                    const studentPayments = state.payments.filter(p => p.studentId == s.id);
+                    studentPayments.forEach(p => {
+                        studentTotalPaid += parseInt(p.paidAmount || p.amount || 0);
+                    });
+                } else {
+                    // Month View
+                    studentTotalOwed = fee;
+                    const p = state.payments.find(p => p.studentId == s.id && p.month === m);
+                    if (p) {
+                        studentTotalPaid = parseInt(p.paidAmount || p.amount || 0);
+                    }
+                }
+
+                totalExpected += studentTotalOwed;
+                totalCollected += studentTotalPaid;
+
+                // If they haven't paid the full expected amount for this period
+                if (studentTotalPaid < studentTotalOwed) {
+                    unpaidStudentsCount++;
+                }
+            });
+
+            const balance = totalExpected - totalCollected;
+
+            const tbody = document.querySelector('#reportTable tbody');
+            tbody.innerHTML = `
+                <tr><td>Financials</td><td>Total Fees Collected</td><td style="color:var(--primary); font-weight:600">$${totalCollected}</td></tr>
+                <tr><td>Enrollment</td><td>Total Active Students</td><td>${filteredStudents.length}</td></tr>
+                <tr><td>Staff</td><td>Active Teaching Staff</td><td>${state.teachers.length}</td></tr>
+            `;
+        };
+
+        const generateAttendanceReport = () => {
+            const studentId = document.getElementById('reportStudentFilter').value;
+            const classFilter = document.getElementById('reportAttendanceClassFilter').value;
+            const tbody = document.querySelector('#attendanceReportTable tbody');
+            tbody.innerHTML = '';
+
+            Object.keys(state.attendance).sort().reverse().forEach(date => {
+                const records = state.attendance[date];
+                records.forEach(rec => {
+                    const student = state.students.find(s => s.id == rec.id);
+                    if (!student) return;
+
+                    const classMatch = (classFilter === 'all' || student.level === classFilter);
+                    const studentMatch = (studentId === 'all' || rec.id == studentId);
+
+                    if (classMatch && studentMatch) {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${date}</td>
+                            <td>${student.name}</td>
+                            <td>${student.level}</td>
+                            <td><span class="badge badge-${rec.status.toLowerCase()}">${rec.status.toUpperCase()}</span></td>
+                        `;
+                        tbody.appendChild(tr);
+                    }
+                });
+            });
+        };
+
+        const generatePaymentReport = () => {
+            const classFilter = document.getElementById('reportPaymentClassFilter').value;
+            const monthFilter = document.getElementById('reportPaymentMonthFilter').value;
+            const tbody = document.querySelector('#paymentReportTable tbody');
+            tbody.innerHTML = '';
+
+            state.students.forEach(student => {
+                if (classFilter === 'all' || student.level === classFilter) {
+                    const payment = state.payments.find(p => p.studentId == student.id && p.month === monthFilter);
+                    const status = payment ? payment.status : 'Pending';
+
+                    // User requested: "when student's payments status is set to partial or paid it should not appear in the reports"
+                    // Interpret: Report should show who hasn't paid (Pending only)
+                    if (status === 'Paid' || status === 'Partial') return;
+
+                    const tr = document.createElement('tr');
+                    const amountNum = payment ? (payment.paidAmount || payment.amount || 0) : 0;
+                    const amountText = payment ? `$${amountNum}` : '-';
+
+                    tr.innerHTML = `
+                        <td>${student.name}</td>
+                        <td>${student.level}</td>
+                        <td><span class="badge badge-${status.toLowerCase()}">${status.toUpperCase()}</span></td>
+                        <td>${amountText}</td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            });
+        };
+
+        const generateCollectionReport = () => {
+            const classFilter = document.getElementById('reportCollectionClassFilter').value;
+            const monthFilter = document.getElementById('reportCollectionMonthFilter').value;
+            const tbody = document.querySelector('#collectionReportTable tbody');
+            tbody.innerHTML = '';
+
+            state.payments.forEach(p => {
+                const student = state.students.find(s => s.id == p.studentId);
+                if (!student) return;
+
+                if (classFilter !== 'all' && student.level !== classFilter) return;
+                if (monthFilter !== 'all' && p.month !== monthFilter) return;
+
+                // Only show records with actual payments
+                if (parseInt(p.paidAmount || 0) <= 0) return;
+
+                const tr = document.createElement('tr');
+                const amountPaid = p.paidAmount || p.amount || 0;
+                tr.innerHTML = `
+                    <td>${student.name}</td>
+                    <td>${student.level}</td>
+                    <td>${p.month}</td>
+                    <td style="color:var(--primary); font-weight:600">$${amountPaid}</td>
+                    <td><span class="badge badge-${p.status.toLowerCase()}">${p.status.toUpperCase()}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        window.onload = () => {
+            populateStudents();
+            generateReport();
+            generateAttendanceReport();
+            generatePaymentReport();
+            generateCollectionReport();
+
+            document.getElementById('reportFilterMonth').onchange = generateReport;
+            document.getElementById('reportFilterClass').onchange = generateReport;
+            document.getElementById('reportAttendanceClassFilter').onchange = () => {
+                populateStudents();
+                generateAttendanceReport();
+            };
+            document.getElementById('reportPaymentClassFilter').onchange = generatePaymentReport;
+            document.getElementById('reportPaymentMonthFilter').onchange = generatePaymentReport;
+            document.getElementById('reportCollectionClassFilter').onchange = generateCollectionReport;
+            document.getElementById('reportCollectionMonthFilter').onchange = generateCollectionReport;
+        };
+    </script>
+</body>
+
+</html>

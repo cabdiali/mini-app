@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance - Quranic School Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>ATD School</h2>
+                <button id="closeSidebar" class="mobile-only">&times;</button>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-link"><span>📊</span> Dashboard</a>
+                <a href="students.html" class="nav-link admin-only"><span>👥</span> Students</a>
+                <a href="teachers.html" class="nav-link admin-only"><span>👨‍🏫</span> Teachers</a>
+                <a href="reg-student.html" class="nav-link admin-only"><span>📝</span> Reg. Student</a>
+                <a href="reg-teacher.html" class="nav-link admin-only"><span>👨‍🔬</span> Reg. Teacher</a>
+                <a href="attendance.html" class="nav-link active"><span>📅</span> Attendance</a>
+                <a href="payments.html" class="nav-link admin-only"><span>💳</span> Payments</a>
+                <a href="reports.html" class="nav-link admin-only"><span>📈</span> Reports</a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="btn btn-secondary full-width">Logout</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <button id="menuToggle" class="mobile-only">☰</button>
+                <div class="title-area">
+                    <h1>Attendance</h1>
+                </div>
+                <div class="user-info"><span id="currentRoleDisplay" class="role-badge">Admin</span></div>
+            </header>
+
+            <div class="content-area">
+                <div class="card">
+                    <div class="card-header" style="flex-wrap:wrap; gap:15px">
+                        <h3>Daily Presence</h3>
+                        <div style="display:flex; gap:10px">
+                            <select id="gradeFilter" style="max-width:200px; display:none"></select>
+                            <input type="date" id="attendanceDate" style="max-width:200px">
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="attendanceTable">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top:20px">
+                        <button id="saveAttendanceBtn" class="btn btn-primary full-width">Save Records</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script src="script.js"></script>
+    <script>
+        const setupGradeFilter = () => {
+            const gradeFilter = document.getElementById('gradeFilter');
+            if (state.currentRole === 'teacher' && state.currentUser) {
+                const approvedGrades = (state.currentUser.assignedGrades || []).filter(g => g.status === 'Approved');
+                if (approvedGrades.length > 0) {
+                    gradeFilter.style.display = 'block';
+                    gradeFilter.innerHTML = approvedGrades.map(g => `<option>${g.grade}</option>`).join('');
+                }
+            }
+        };
+
+        const renderAttendance = () => {
+            const tbody = document.querySelector('#attendanceTable tbody');
+            tbody.innerHTML = '';
+
+            let students = state.students;
+            const selectedGrade = document.getElementById('gradeFilter').value;
+
+            if (state.currentRole === 'teacher') {
+                if (!selectedGrade) {
+                    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center">No approved grades assigned.</td></tr>';
+                    return;
+                }
+                students = students.filter(s => s.level === selectedGrade);
+            }
+
+            const currentDate = document.getElementById('attendanceDate').value;
+            const savedData = state.attendance[currentDate] || [];
+
+            students.forEach(s => {
+                const savedStatus = savedData.find(a => a.id == s.id)?.status || 'present';
+                const tr = document.createElement('tr');
+                tr.dataset.id = s.id;
+                tr.innerHTML = `
+                    <td>${s.name} <br><small style="color:var(--text-light)">${s.level}</small></td>
+                    <td>
+                        <div class="attendance-btns">
+                            <button class="att-btn present ${savedStatus === 'present' ? 'active' : ''}" data-status="present" onclick="setAtt(this)">P</button>
+                            <button class="att-btn absent ${savedStatus === 'absent' ? 'active' : ''}" data-status="absent" onclick="setAtt(this)">A</button>
+                            <button class="att-btn late ${savedStatus === 'late' ? 'active' : ''}" data-status="late" onclick="setAtt(this)">L</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        window.setAtt = (btn) => {
+            btn.parentElement.querySelectorAll('.att-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        };
+
+        document.getElementById('saveAttendanceBtn').onclick = async () => {
+            const date = document.getElementById('attendanceDate').value;
+            if (!date) return alert('Please select a date');
+
+            const data = state.attendance[date] || [];
+
+            document.querySelectorAll('#attendanceTable tbody tr').forEach(row => {
+                const studentId = row.dataset.id;
+                const statusBtn = row.querySelector('.att-btn.active');
+                if (!statusBtn) return;
+
+                const status = statusBtn.dataset.status;
+
+                const index = data.findIndex(a => a.id == studentId);
+                if (index > -1) {
+                    data[index].status = status;
+                } else {
+                    data.push({ id: studentId, status: status });
+                }
+            });
+
+            state.attendance[date] = data;
+            await saveToDb('attendance', date, { records: data });
+            alert('Attendance saved for ' + date);
+        };
+
+        document.getElementById('attendanceDate').onchange = renderAttendance;
+        document.getElementById('gradeFilter').onchange = renderAttendance;
+
+        window.onload = () => {
+            document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
+            setupGradeFilter();
+            renderAttendance();
+        };
+    </script>
+</body>
+
+</html>

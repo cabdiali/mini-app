@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reg Teacher - Quranic School Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>ATD School</h2>
+                <button id="closeSidebar" class="mobile-only">&times;</button>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-link"><span>📊</span> Dashboard</a>
+                <a href="students.html" class="nav-link admin-only"><span>👥</span> Students</a>
+                <a href="teachers.html" class="nav-link admin-only"><span>👨‍🏫</span> Teachers</a>
+                <a href="reg-student.html" class="nav-link admin-only"><span>📝</span> Reg. Student</a>
+                <a href="reg-teacher.html" class="nav-link active admin-only"><span>👨‍🔬</span> Reg. Teacher</a>
+                <a href="attendance.html" class="nav-link"><span>📅</span> Attendance</a>
+                <a href="payments.html" class="nav-link admin-only"><span>💳</span> Payments</a>
+                <a href="reports.html" class="nav-link admin-only"><span>📈</span> Reports</a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="btn btn-secondary full-width">Logout</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <button id="menuToggle" class="mobile-only">☰</button>
+                <div class="title-area">
+                    <h1>Register Teacher</h1>
+                </div>
+                <div class="user-info"><span id="currentRoleDisplay" class="role-badge">Admin</span></div>
+            </header>
+
+            <div class="content-area">
+                <div class="card form-card">
+                    <h3>Register New Teacher</h3>
+                    <form id="teacherRegForm">
+                        <div class="form-group-grid">
+                            <div class="form-group">
+                                <label>Teacher Name</label>
+                                <input type="text" id="tRegName" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Username (Login)</label>
+                                <input type="text" id="tRegUser" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Password</label>
+                                <input type="password" id="tRegPass" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <input type="tel" id="tRegPhone" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Join Date</label>
+                                <input type="date" id="tRegDate" required>
+                            </div>
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label>Assigned Grades & Permissions</label>
+                                <div
+                                    style="display:flex; gap:10px; margin-bottom:15px; background:var(--bg-main); padding:15px; border-radius:var(--radius); align-items:flex-end; flex-wrap:wrap">
+                                    <div style="flex:1; min-width:150px">
+                                        <label style="font-size:0.8rem">Grade</label>
+                                        <select id="gradeSelect">
+                                            <option>Grade 4</option>
+                                            <option>Grade 5</option>
+                                            <option>Grade 6</option>
+                                            <option>Grade 7</option>
+                                            <option>Grade 8</option>
+                                            <option>Grade 9</option>
+                                            <option>Grade 10</option>
+                                            <option>Grade 11</option>
+                                            <option>Grade 12</option>
+                                        </select>
+                                    </div>
+                                    <div style="flex:1; min-width:120px">
+                                        <label style="font-size:0.8rem">Status</label>
+                                        <select id="statusSelect">
+                                            <option value="Approved">Approved</option>
+                                            <option value="Pending">Pending</option>
+                                        </select>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:5px; padding-bottom:12px">
+                                        <input type="checkbox" id="paySelect" style="width:20px; height:20px">
+                                        <label style="margin-bottom:0; font-size:0.8rem">Payments</label>
+                                    </div>
+                                    <button type="button" class="btn btn-secondary" onclick="addGradeRow()"
+                                        style="height:45px">Add</button>
+                                </div>
+                                <table id="gradesTable" style="background:white">
+                                    <thead>
+                                        <tr>
+                                            <th>Grade</th>
+                                            <th>Status</th>
+                                            <th>Payments</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Add Teacher</button>
+                            <button type="reset" class="btn btn-secondary">Clear</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script src="script.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const editId = urlParams.get('editId');
+        let editMode = false;
+        let assignedGrades = [];
+
+        const renderGrades = () => {
+            const tbody = document.querySelector('#gradesTable tbody');
+            tbody.innerHTML = '';
+            assignedGrades.forEach((g, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${g.grade}</td>
+                    <td><span class="badge ${g.status === 'Approved' ? 'badge-active' : 'badge-pending'}">${g.status}</span></td>
+                    <td>${g.canManagePayments ? '✅' : '❌'}</td>
+                    <td><button type="button" class="btn btn-secondary btn-sm" onclick="removeGrade(${index})">Remove</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        window.addGradeRow = () => {
+            const grade = document.getElementById('gradeSelect').value;
+            const status = document.getElementById('statusSelect').value;
+            const canManagePayments = document.getElementById('paySelect').checked;
+
+            if (assignedGrades.some(g => g.grade === grade)) {
+                return alert('This grade is already assigned.');
+            }
+
+            assignedGrades.push({ grade, status, canManagePayments });
+            renderGrades();
+        };
+
+        window.removeGrade = (index) => {
+            assignedGrades.splice(index, 1);
+            renderGrades();
+        };
+
+        if (editId) {
+            const teacher = state.teachers.find(t => t.id == editId);
+            if (teacher) {
+                editMode = true;
+                document.querySelector('h1').innerText = 'Edit Teacher';
+                document.querySelector('.card h3').innerText = 'Update Teacher Information';
+                document.querySelector('button[type="submit"]').innerText = 'Update Teacher';
+
+                document.getElementById('tRegName').value = teacher.name;
+                document.getElementById('tRegUser').value = teacher.username;
+                document.getElementById('tRegPass').value = teacher.password;
+                document.getElementById('tRegPhone').value = teacher.phone;
+                document.getElementById('tRegDate').value = teacher.date;
+                assignedGrades = [...(teacher.assignedGrades || [])];
+                renderGrades();
+            }
+        }
+
+        document.getElementById('teacherRegForm').onsubmit = async (e) => {
+            e.preventDefault();
+            if (assignedGrades.length === 0) {
+                return alert('Please assign at least one grade.');
+            }
+
+            const name = document.getElementById('tRegName').value;
+            const username = document.getElementById('tRegUser').value;
+
+            // Duplicate check
+            if (!editMode) {
+                const isDuplicate = state.teachers.some(t =>
+                    (t.username && t.username.toLowerCase() === username.toLowerCase()) ||
+                    (t.name && t.name.toLowerCase() === name.toLowerCase())
+                );
+                if (isDuplicate) {
+                    return alert('A teacher with this name or username is already registered.');
+                }
+            }
+
+            const teacherData = {
+                id: editMode ? parseInt(editId) : Date.now(),
+                name: name,
+                assignedGrades: assignedGrades,
+                username: username,
+                password: document.getElementById('tRegPass').value,
+                phone: document.getElementById('tRegPhone').value,
+                date: document.getElementById('tRegDate').value,
+                status: editMode ? state.teachers.find(t => t.id == editId).status : 'Active'
+            };
+
+            if (editMode) {
+                const index = state.teachers.findIndex(t => t.id == editId);
+                state.teachers[index] = teacherData;
+            } else {
+                state.teachers.push(teacherData);
+            }
+
+            await saveToDb('teachers', teacherData.id, teacherData);
+            alert(editMode ? 'Teacher updated successfully!' : 'Teacher added successfully!');
+            window.location.href = 'teachers.html';
+        };
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reg Student - Quranic School Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>ATD School</h2>
+                <button id="closeSidebar" class="mobile-only">&times;</button>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-link"><span>📊</span> Dashboard</a>
+                <a href="students.html" class="nav-link admin-only"><span>👥</span> Students</a>
+                <a href="teachers.html" class="nav-link admin-only"><span>👨‍🏫</span> Teachers</a>
+                <a href="reg-student.html" class="nav-link active admin-only"><span>📝</span> Reg. Student</a>
+                <a href="reg-teacher.html" class="nav-link admin-only"><span>👨‍🔬</span> Reg. Teacher</a>
+                <a href="attendance.html" class="nav-link"><span>📅</span> Attendance</a>
+                <a href="payments.html" class="nav-link admin-only"><span>💳</span> Payments</a>
+                <a href="reports.html" class="nav-link admin-only"><span>📈</span> Reports</a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="btn btn-secondary full-width">Logout</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <button id="menuToggle" class="mobile-only">☰</button>
+                <div class="title-area">
+                    <h1>Registration</h1>
+                </div>
+                <div class="user-info"><span id="currentRoleDisplay" class="role-badge">Admin</span></div>
+            </header>
+
+            <div class="content-area">
+                <div class="card form-card">
+                    <h3>Register New Student</h3>
+                    <form id="registrationForm">
+                        <div class="form-group-grid">
+                            <div class="form-group">
+                                <label>Full Name</label>
+                                <input type="text" id="regFullName" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Date of Birth</label>
+                                <input type="date" id="regDob" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Class Level</label>
+                                <select id="regLevel" required>
+                                    <option value="" disabled selected>Select Grade</option>
+                                    <option>Grade 4</option>
+                                    <option>Grade 5</option>
+                                    <option>Grade 6</option>
+                                    <option>Grade 7</option>
+                                    <option>Grade 8</option>
+                                    <option>Grade 9</option>
+                                    <option>Grade 10</option>
+                                    <option>Grade 11</option>
+                                    <option>Grade 12</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Parent Name</label>
+                                <input type="text" id="regParentName" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <input type="tel" id="regPhone" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Monthly Fee ($)</label>
+                                <input type="number" id="regFee" placeholder="e.g. 200" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Address</label>
+                                <input type="text" id="regAddress">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Add Student</button>
+                            <button type="reset" class="btn btn-secondary">Clear</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script src="script.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const editId = urlParams.get('editId');
+        let editMode = false;
+
+        if (editId) {
+            const student = state.students.find(s => s.id == editId);
+            if (student) {
+                editMode = true;
+                document.querySelector('h1').innerText = 'Edit Student';
+                document.querySelector('.card h3').innerText = 'Update Student Information';
+                document.querySelector('button[type="submit"]').innerText = 'Update Student';
+
+                document.getElementById('regFullName').value = student.name;
+                document.getElementById('regDob').value = student.dob;
+                document.getElementById('regLevel').value = student.level;
+                document.getElementById('regFee').value = student.fee || state.gradeFees[student.level] || 200;
+                document.getElementById('regParentName').value = student.parent;
+                document.getElementById('regPhone').value = student.phone;
+                document.getElementById('regAddress').value = student.address || '';
+            }
+        }
+
+        document.getElementById('regLevel').onchange = (e) => {
+            const grade = e.target.value;
+            const feeInput = document.getElementById('regFee');
+            if (state.gradeFees[grade]) {
+                feeInput.value = state.gradeFees[grade];
+            }
+        };
+
+        document.getElementById('registrationForm').onsubmit = async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('regFullName').value;
+            const level = document.getElementById('regLevel').value;
+
+            // Check for duplicate name in the same grade (if not in edit mode)
+            if (!editMode) {
+                const isDuplicate = state.students.some(s =>
+                    s.name.toLowerCase() === name.toLowerCase() && s.level === level
+                );
+                if (isDuplicate) {
+                    return alert('A student with this name is already registered in ' + level);
+                }
+            }
+
+            let newId;
+            if (editMode) {
+                newId = parseInt(editId);
+            } else {
+                const smallIds = state.students.map(s => parseInt(s.id)).filter(id => id < 1000000);
+                newId = smallIds.length > 0 ? Math.max(...smallIds) + 1 : 1000;
+            }
+
+            const studentData = {
+                id: newId,
+                name: document.getElementById('regFullName').value,
+                dob: document.getElementById('regDob').value,
+                level: document.getElementById('regLevel').value,
+                fee: document.getElementById('regFee').value,
+                parent: document.getElementById('regParentName').value,
+                phone: document.getElementById('regPhone').value,
+                address: document.getElementById('regAddress').value
+            };
+
+            if (editMode) {
+                const index = state.students.findIndex(s => s.id == editId);
+                state.students[index] = studentData;
+            } else {
+                state.students.push(studentData);
+            }
+
+            await saveToDb('students', studentData.id, studentData);
+            alert(editMode ? 'Student updated successfully!' : 'Student added successfully!');
+            window.location.href = 'students.html';
+        };
+    </script>
+</body>
+
+</html>

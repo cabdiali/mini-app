@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Quranic School Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="login-wrapper">
+    <div class="login-box">
+        <div class="login-header">
+            <div class="logo-circle">
+                <img src="logo.png" alt="ATD School Logo"
+                    style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%;">
+            </div>
+            <h1>ATD School</h1>
+            <p>Management System</p>
+        </div>
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="loginUser" placeholder="admin or teacher" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPass" placeholder="Enter password" required>
+            </div>
+            <button type="submit" class="btn btn-primary full-width">Login to Dashboard</button>
+        </form>
+        <div class="login-footer">
+            <p>Demo credentials: <b>admin/admin</b> or <b>teacher/teacher</b></p>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script src="script.js"></script>
+    <script>
+        // Specific login page logic
+        document.getElementById('loginForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const user = document.getElementById('loginUser').value.toLowerCase();
+            const pass = document.getElementById('loginPass').value;
+
+            // Wait a moment if connecting to cloud
+            if (isFirebaseReady && !state.isCloudSynced) {
+                const btn = e.target.querySelector('button');
+                btn.innerText = 'Connecting to Cloud...';
+                // Poll for sync for up to 3 seconds
+                for (let i = 0; i < 30; i++) {
+                    if (state.isCloudSynced) break;
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                btn.innerText = 'Login to Dashboard';
+            }
+
+            if (user === 'admin' && pass === 'admin') {
+                localStorage.setItem('qsms_v2_isLoggedIn', 'true');
+                localStorage.setItem('qsms_v2_role', 'admin');
+                localStorage.removeItem('qsms_v2_user');
+                window.location.href = 'dashboard.html';
+                return;
+            }
+
+            // Check against registered teachers
+            const teacher = state.teachers.find(t => t.username && t.username.toLowerCase() === user && t.password === pass);
+            if (teacher) {
+                localStorage.setItem('qsms_v2_isLoggedIn', 'true');
+                localStorage.setItem('qsms_v2_role', 'teacher');
+                localStorage.setItem('qsms_v2_user', JSON.stringify(teacher));
+                window.location.href = 'dashboard.html';
+            } else {
+                alert('Invalid credentials! Try admin/admin or your registered teacher account');
+            }
+        };
+    </script>
+</body>
+
+</html>

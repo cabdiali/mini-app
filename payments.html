@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payments - Quranic School Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>ATD School</h2>
+                <button id="closeSidebar" class="mobile-only">&times;</button>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-link"><span>📊</span> Dashboard</a>
+                <a href="students.html" class="nav-link admin-only"><span>👥</span> Students</a>
+                <a href="teachers.html" class="nav-link admin-only"><span>👨‍🏫</span> Teachers</a>
+                <a href="reg-student.html" class="nav-link admin-only"><span>📝</span> Reg. Student</a>
+                <a href="reg-teacher.html" class="nav-link admin-only"><span>👨‍🔬</span> Reg. Teacher</a>
+                <a href="attendance.html" class="nav-link"><span>📅</span> Attendance</a>
+                <a href="payments.html" class="nav-link active admin-only"><span>💳</span> Payments</a>
+                <a href="reports.html" class="nav-link admin-only"><span>📈</span> Reports</a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="btn btn-secondary full-width">Logout</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <button id="menuToggle" class="mobile-only">☰</button>
+                <div class="title-area">
+                    <h1>Fees & Payments</h1>
+                </div>
+                <div class="user-info"><span id="currentRoleDisplay" class="role-badge">Admin</span></div>
+            </header>
+
+            <div class="content-area">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Payment Ledger</h3>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap">
+                            <select id="gradeFilter" style="max-width:200px; display:none"></select>
+                            <input type="text" id="studentSearch" placeholder="Search by student name..."
+                                style="max-width:250px">
+                            <select id="paymentMonth">
+                                <option>January</option>
+                                <option>February</option>
+                                <option>March</option>
+                                <option>April</option>
+                                <option>May</option>
+                                <option>June</option>
+                                <option>July</option>
+                                <option>August</option>
+                                <option>September</option>
+                                <option>October</option>
+                                <option>November</option>
+                                <option>December</option>
+                            </select>
+                            <select id="paymentFilter">
+                                <option value="all">All Statuses</option>
+                                <option value="paid">Paid</option>
+                                <option value="partial">Partial</option>
+                                <option value="pending">Pending</option>
+                            </select>
+                            <button class="btn btn-secondary btn-sm" onclick="resetFilters()">Reset</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="paymentTable">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Month</th>
+                                    <th>Total Fee</th>
+                                    <th>Paid</th>
+                                    <th>Balance</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script src="script.js"></script>
+    <script>
+        // Security check: Only admin or authorized teachers with approved payment grades
+        const canAccessPayments = state.currentRole === 'admin' ||
+            (state.currentRole === 'teacher' && state.currentUser &&
+                (state.currentUser.assignedGrades || []).some(g => g.status === 'Approved' && g.canManagePayments));
+
+        if (!canAccessPayments) {
+            window.location.href = 'dashboard.html';
+        }
+
+        const setupGradeFilter = () => {
+            const gradeFilter = document.getElementById('gradeFilter');
+            if (state.currentRole === 'admin') {
+                const levels = [...new Set(state.students.map(s => s.level))].filter(l => l).sort();
+                gradeFilter.style.display = 'block';
+                gradeFilter.innerHTML = '<option value="all">All Grades</option>' +
+                    levels.map(l => `<option>${l}</option>`).join('');
+            } else if (state.currentRole === 'teacher' && state.currentUser) {
+                const approvedGrades = (state.currentUser.assignedGrades || []).filter(g => g.status === 'Approved');
+                if (approvedGrades.length > 0) {
+                    gradeFilter.style.display = 'block';
+                    gradeFilter.innerHTML = approvedGrades.map(g => `<option>${g.grade}</option>`).join('');
+                }
+            }
+        };
+
+        const renderPayments = () => {
+            const query = document.getElementById('studentSearch').value.toLowerCase();
+            const monthSelection = document.getElementById('paymentMonth').value;
+            const filter = document.getElementById('paymentFilter').value;
+            const selectedGrade = document.getElementById('gradeFilter').value;
+            const tbody = document.querySelector('#paymentTable tbody');
+            tbody.innerHTML = '';
+
+            let students = state.students;
+
+            // Filter by grade
+            if (state.currentRole === 'teacher') {
+                if (!selectedGrade) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">No approved grades assigned.</td></tr>';
+                    return;
+                }
+                students = students.filter(s => s.level === selectedGrade);
+            } else if (state.currentRole === 'admin') {
+                // If "all" or no selection, show everyone. Otherwise filter by grade.
+                if (selectedGrade && selectedGrade !== 'all') {
+                    students = students.filter(s => s.level === selectedGrade);
+                }
+            }
+
+            if (students.length === 0 && state.students.length > 0) {
+                console.warn('All students were filtered out. Total students:', state.students.length);
+            }
+
+            // Filter by search query
+            if (query) {
+                students = students.filter(s => s.name.toLowerCase().includes(query));
+            }
+
+            // Determine payment permission once for this render
+            let canPay = state.currentRole === 'admin';
+            if (state.currentRole === 'teacher' && state.currentUser) {
+                const gradeAssignment = state.currentUser.assignedGrades.find(g => g.grade === selectedGrade && g.status === 'Approved');
+                canPay = gradeAssignment && gradeAssignment.canManagePayments;
+            }
+
+            students.forEach(s => {
+                const monthsToShow = [monthSelection];
+
+                monthsToShow.forEach(m => {
+                    let p = state.payments.find(pay => pay.studentId == s.id && pay.month == m);
+                    const totalFee = parseInt(s.fee || state.gradeFees[s.level] || 200);
+
+                    if (!p) {
+                        p = { studentId: s.id, month: m, paidAmount: 0, status: 'Pending' };
+                    }
+
+                    const paid = parseInt(p.paidAmount || 0);
+                    const balance = totalFee - paid;
+
+                    let status = 'Pending';
+                    if (paid >= totalFee) status = 'Paid';
+                    else if (paid > 0) status = 'Partial';
+
+                    if (filter !== 'all' && status.toLowerCase() !== filter) return;
+
+                    const actionBtn = canPay ?
+                        `<button class="btn btn-primary btn-sm" onclick="recordPayment(${s.id}, '${m}', ${totalFee}, ${paid})">Pay</button>` :
+                        `<span style="color:var(--text-light); font-size:0.8rem">View Only</span>`;
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${s.name} <br><small>${s.level}</small></td>
+                            <td>${m}</td>
+                            <td>$${totalFee}</td>
+                            <td style="color:var(--primary); font-weight:600">$${paid}</td>
+                            <td style="color:var(--secondary); font-weight:600">$${balance}</td>
+                            <td><span class="badge badge-${status.toLowerCase()}">${status}</span></td>
+                            <td>${actionBtn}</td>
+                        </tr>
+                    `;
+                });
+            });
+        };
+
+        window.recordPayment = async (sid, m, total, currentPaid) => {
+            // Permission check (security backup)
+            const selectedGrade = document.getElementById('gradeFilter').value;
+            let canPay = state.currentRole === 'admin';
+            if (state.currentRole === 'teacher' && state.currentUser) {
+                const gradeAssignment = state.currentUser.assignedGrades.find(g => g.grade === selectedGrade);
+                canPay = gradeAssignment && gradeAssignment.canManagePayments;
+            }
+
+            if (!canPay) return alert('You do not have permission to manage payments for this grade.');
+
+            const amount = prompt(`Enter payment amount for ${m} (Balance: $${total - currentPaid})`);
+            if (amount === null || amount === "") return;
+
+            const numAmount = parseInt(amount);
+            if (isNaN(numAmount) || numAmount < 0) return alert('Invalid amount');
+
+            let pIndex = state.payments.findIndex(pay => pay.studentId == sid && pay.month == m);
+            let paymentData;
+            if (pIndex > -1) {
+                state.payments[pIndex].paidAmount = currentPaid + numAmount;
+                state.payments[pIndex].status = (state.payments[pIndex].paidAmount >= total) ? 'Paid' : 'Partial';
+                paymentData = state.payments[pIndex];
+            } else {
+                paymentData = {
+                    studentId: sid,
+                    month: m,
+                    paidAmount: numAmount,
+                    status: (numAmount >= total) ? 'Paid' : 'Partial'
+                };
+                state.payments.push(paymentData);
+            }
+
+            await saveToDb('payments', sid + '_' + m, paymentData);
+            renderPayments();
+        };
+
+        const resetFilters = () => {
+            document.getElementById('studentSearch').value = '';
+            document.getElementById('paymentFilter').value = 'all';
+            renderPayments();
+        };
+
+        document.getElementById('studentSearch').oninput = renderPayments;
+        document.getElementById('paymentMonth').onchange = renderPayments;
+        document.getElementById('paymentFilter').onchange = renderPayments;
+        document.getElementById('gradeFilter').onchange = renderPayments;
+
+        window.onload = () => {
+            setupGradeFilter();
+            renderPayments();
+        };
+
+    </script>
+</body>
+
+</html>

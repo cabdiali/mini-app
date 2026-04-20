@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Students - Quranic School Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>ATD School</h2>
+                <button id="closeSidebar" class="mobile-only">&times;</button>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-link"><span>📊</span> Dashboard</a>
+                <a href="students.html" class="nav-link active admin-only"><span>👥</span> Students</a>
+                <a href="teachers.html" class="nav-link admin-only"><span>👨‍🏫</span> Teachers</a>
+                <a href="reg-student.html" class="nav-link admin-only"><span>📝</span> Reg. Student</a>
+                <a href="reg-teacher.html" class="nav-link admin-only"><span>👨‍🔬</span> Reg. Teacher</a>
+                <a href="attendance.html" class="nav-link"><span>📅</span> Attendance</a>
+                <a href="payments.html" class="nav-link admin-only"><span>💳</span> Payments</a>
+                <a href="reports.html" class="nav-link admin-only"><span>📈</span> Reports</a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="btn btn-secondary full-width">Logout</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <button id="menuToggle" class="mobile-only">☰</button>
+                <div class="title-area">
+                    <h1>Students List</h1>
+                </div>
+                <div class="user-info">
+                    <span id="currentRoleDisplay" class="role-badge">Admin</span>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>All Students</h3>
+                        <input type="text" id="studentSearch" placeholder="Search name..." style="max-width:300px">
+                    </div>
+                    <div class="table-container">
+                        <table id="studentTable">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Level</th>
+                                    <th>Parent</th>
+                                    <th>Phone</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script src="script.js"></script>
+    <script>
+        const renderStudents = (search = '') => {
+            const tbody = document.querySelector('#studentTable tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            const list = state.students || [];
+            list.filter(s => s.name.toLowerCase().includes(search.toLowerCase())).forEach(s => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${s.name}</td>
+                    <td>${s.level || 'N/A'}</td>
+                    <td>${s.parent || 'N/A'}</td>
+                    <td>${s.phone || 'N/A'}</td>
+                    <td><span style="display:flex; gap:5px">
+                        <button class="btn btn-primary btn-sm" onclick="window.location.href='reg-student.html?editId=${s.id}'">Edit</button>
+                        <button class="btn btn-secondary btn-sm" onclick="deleteStudent(${s.id})">Delete</button>
+                    </span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        window.deleteStudent = async (id) => {
+            if (confirm('Delete student record?')) {
+                state.students = state.students.filter(s => s.id != id);
+                await deleteFromDb('students', id);
+                renderStudents();
+            }
+        };
+
+        document.getElementById('studentSearch').oninput = (e) => renderStudents(e.target.value);
+
+        // Use multiple triggers to ensure rendering happens
+        window.addEventListener('load', () => renderStudents());
+        document.addEventListener('DOMContentLoaded', () => renderStudents());
+        // Fallback
+        setTimeout(renderStudents, 500);
+    </script>
+</body>
+
+</html>

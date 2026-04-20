@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teachers - Quranic School Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>ATD School</h2>
+                <button id="closeSidebar" class="mobile-only">&times;</button>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-link"><span>📊</span> Dashboard</a>
+                <a href="students.html" class="nav-link admin-only"><span>👥</span> Students</a>
+                <a href="teachers.html" class="nav-link active admin-only"><span>👨‍🏫</span> Teachers</a>
+                <a href="reg-student.html" class="nav-link admin-only"><span>📝</span> Reg. Student</a>
+                <a href="reg-teacher.html" class="nav-link admin-only"><span>👨‍🔬</span> Reg. Teacher</a>
+                <a href="attendance.html" class="nav-link"><span>📅</span> Attendance</a>
+                <a href="payments.html" class="nav-link admin-only"><span>💳</span> Payments</a>
+                <a href="reports.html" class="nav-link admin-only"><span>📈</span> Reports</a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="btn btn-secondary full-width">Logout</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <button id="menuToggle" class="mobile-only">☰</button>
+                <div class="title-area">
+                    <h1>Teachers List</h1>
+                </div>
+                <div class="user-info"><span id="currentRoleDisplay" class="role-badge">Admin</span></div>
+            </header>
+
+            <div class="content-area">
+                <div class="card">
+                    <div class="table-container">
+                        <table id="teacherTable">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Assigned Grades</th>
+                                    <th>Phone</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script src="script.js"></script>
+    <script>
+        const renderTeachers = () => {
+            const tbody = document.querySelector('#teacherTable tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            state.teachers.forEach(t => {
+                const tr = document.createElement('tr');
+                const gradesHtml = (t.assignedGrades || []).map(g => `
+                    <div style="margin-bottom:5px">
+                        <b>${g.grade}</b> 
+                        <span class="badge ${g.status === 'Approved' ? 'badge-active' : 'badge-pending'}">${g.status}</span>
+                        ${g.canManagePayments ? '💳' : ''}
+                    </div>
+                `).join('');
+
+                tr.innerHTML = `
+                    <td>${t.name}</td>
+                    <td>${gradesHtml || 'None'}</td>
+                    <td>${t.phone}</td>
+                    <td><span class="badge badge-active">${t.status}</span></td>
+                    <td><span style="display:flex; gap:5px">
+                        <button class="btn btn-primary btn-sm" onclick="window.location.href='reg-teacher.html?editId=${t.id}'">Edit</button>
+                        <button class="btn btn-secondary btn-sm" onclick="deleteTeacher(${t.id})">Remove</button>
+                    </span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        window.deleteTeacher = async (id) => {
+            if (confirm('Remove teacher?')) {
+                state.teachers = state.teachers.filter(t => t.id != id);
+                await deleteFromDb('teachers', id);
+                renderTeachers();
+            }
+        };
+
+        window.addEventListener('load', renderTeachers);
+        setTimeout(renderTeachers, 500);
+    </script>
+</body>
+
+</html>
